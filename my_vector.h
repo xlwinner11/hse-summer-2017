@@ -6,6 +6,8 @@ class my_vector {
     T value_type;
 
  public:
+    using size_t = std::size_t;
+
     my_vector();
 
     ~ my_vector();
