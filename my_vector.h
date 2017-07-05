@@ -20,6 +20,8 @@ class my_vector {
 
     void assign(size_t count, const T& value);
 
+    void assign(std::initializer_list<T> ilist);
+
     // element access
 
     T& at(size_t pos);
@@ -37,6 +39,8 @@ class my_vector {
     T& back();
 
     const T& back() const;
+
+    const T* data() const noexcept;
 
     // iterators
 
