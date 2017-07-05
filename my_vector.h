@@ -1,9 +1,11 @@
 #include <initializer_list>
+#include <memory>
 
-template <typename T>
+template <typename T, class Allocator = std::allocator<T>>
 class my_vector {
  private:
     T value_type;
+    Allocator allocator;
 
  public:
     using size_t = std::size_t;
@@ -21,6 +23,8 @@ class my_vector {
     void assign(size_t count, const T& value);
 
     void assign(std::initializer_list<T> ilist);
+
+    allocator get_allocator() const;
 
     // element access
 
