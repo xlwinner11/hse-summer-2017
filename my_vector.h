@@ -10,12 +10,72 @@ class vector_iterator: public std::iterator<
     std::random_access_iterator_tag, T> {
  private:
     friend class my_vector<T>;
-    // TODO
+    const shared_ptr<my_vector<T>> associated_vector;
+    std::list<T>::iterator inner_iterator;
+    std::list<std::list<T>>::iterator outer_iterator;
+    list<T>& current_element_for_inner;
 
  public:
-    // TODO
+    // TODO : +=, -=
+    vector_iterator() = default;
 
+    vector_iterator(const my_vector<T>& other, std::list<T>::iterator inner, 
+        std::list<std::list<T>>::iterator outer, const std::list<T>& cur_elem)
+        : associated_vector(make_shared<my_vector<T>>(other))
+        , inner_iterator(inner)
+        , outer_iterator(outer)
+        , current_element_for_inner(cur_elem)
+    {}
+
+    vector_iterator& operator++() {
+        if (inner_iterator == (*current_element_for_inner).end()) {
+            ++outer_iterator;
+            current_element_for_inner = *outer_iterator;
+            inner_iterator = (*outer_iterator).begin();
+            return (*this);
+        } else {
+            ++inner_iterator;
+            return (*this);
+        }
+    }
+
+    vector_iterator operator++(int) {
+        vector_iterator tmp(*this);
+        ++(*this);
+        return tmp;
+    }
+
+    vector_iterator& operator--() {
+        if (inner_iterator == (*current_element_for_inner).begin()
+            && outer_iterator == (*associated_vector).begin()) {
+            --inner_iterator;
+            return (*this);
+        } else if (inner_iterator == (*current_element_for_inner).begin()) {
+            --outer_iterator;
+            inner_iterator = --(*outer_iterator).end();
+            current_element_for_inner = *outer_iterator;
+            return (*this);
+        } else {
+            --inner_iterator;
+            return (*this);
+        }
+    }
+
+    vector_iterator operator--(int) {
+        vector_iterator tmp(*this);
+        --(*this);
+        return tmp;
+    }
+
+    const T& operator* () const {
+        return *inner_iterator;
+    }
+
+    const T& operator->() const {
+        return &(*inner_iterator);
+    }
 };
+
 
 template <typename T>
 class my_vector {
@@ -25,14 +85,10 @@ class my_vector {
     using literator = std::list<T>::iterator;
     list<list<T>> _data;
     size_t _size;
-    size_t _max_block_size;       // think if its needed
-    size_t _min_block_size;       // ^
-    size_t _number_of_max_blocks; // ^
-    size_t _number_of_min_blocks; // ^
-    const size_t _MAX_FOR_ONE_LIST = 144;
+    const size_t _MAX_FOR_ONE_LIST = 128;
     friend class vector_iterator<T>;
 
-    void rebalance() noexcept {
+    void rebalance() noexcept { // TODO : deletion of empty blocks
         if (_size <= _MAX_FOR_ONE_LIST) {
             // TODO
             if (_data.size() == 1) {
@@ -79,7 +135,14 @@ class my_vector {
 
  public:
     using iterator = vector_iterator;
-    my_vector() = default;
+    explicit my_vector() = default;
+
+    explicit my_vector(size_t count, const T& value = T()) {
+        while (count --> 0) {
+            add_back(count);
+        }
+        rebalance();
+    }
 
     template <typename RAIterator>
     my_vector(RAIterator first, RAIterator last) {
@@ -199,17 +262,22 @@ class my_vector {
         return _size;
     };
 
-    size_t max_size() const noexcept;
+    size_t max_size() const noexcept = delete;
 
-    void reserve(size_t new_capacity);
+    void reserve(size_t new_capacity) = delete;
 
-    size_t capacity() const noexcept;
+    size_t capacity() const noexcept = delete;
 
-    void shrink_to_fit(); // ???
+    void shrink_to_fit() = delete();
 
     // modifiers
 
-    void clear() noexcept;
+    void clear() noexcept {
+        while (!_data.empty()) {
+            _data.back().clear();
+            _data.pop_back();
+        }
+    };
 
     iterator insert(iterator pos, const T& value);
 
@@ -234,17 +302,7 @@ class my_vector {
         }
         _data.back().push_back(value);
         ++_size;
-        // TODO
-        // something has to be done with the blocks
-        // if (_data.size() - 1 == _min_block_size) {
-        //     --_number_of_min_blocks;
-        // }
-        // if (_number_of_min_blocks == 0) {
-        //     _min_block_size == 
-        // }
-        // if (_max_block_size > _min_block_size * 2) {
-        //     rebalance();
-        // }
+        rebalance();
     };
 
     void push_back(T&& value);
@@ -255,13 +313,25 @@ class my_vector {
     template <class... Args>
     Args& emplace_back(Args&&... args);
 
-    void pop_back();
+    void pop_back() {
+        if (!_data.empty()) {
+            _data.back().pop_back();
+            if (_data.back().empty()) {
+                _data.pop_back();
+            }
+            --_size;
+            rebalance();
+        }
+    };
 
-    void resize(size_t new_size);
+    void resize(size_t new_size) = delete;
 
-    void resize(size_t new_size, const T& value);
+    void resize(size_t new_size, const T& value) = delete;
 
-    void swap(my_vector& other);
+    void swap(my_vector& other) {
+        std::swap(_data, other._data);
+        std::swap(_size, other._size);
+    };
 
 };
 
@@ -282,3 +352,8 @@ bool operator>(my_vector<T>& first, my_vector<T>& second);
 
 template<class T>
 bool operator>=(my_vector<T>& first, my_vector<T>& second);
+
+template <class T>
+void swap(my_vector<T>& left, my_vector<T>& right) {
+    left.swap(right);
+}
