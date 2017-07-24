@@ -5,38 +5,39 @@
 #include <exception>
 #include <utility>
 
-template <typename T>
+template <class T>
+class my_vector;
+
+template <class T>
 class vector_iterator: public std::iterator<
     std::random_access_iterator_tag, T> {
  private:
-    friend class my_vector<T>;
-    const shared_ptr<my_vector<T>> associated_vector;
-    std::list<T>::iterator inner_iterator;
-    std::list<std::list<T>>::iterator outer_iterator;
-    list<T>& current_element_for_inner;
+    // friend class my_vector<T>;
+    const std::shared_ptr<my_vector<T>> associated_vector;
+    typename std::list<T>::iterator inner_iterator;
+    typename std::list<std::list<T>>::iterator outer_iterator;
+    std::list<T>& current_element_for_inner;
 
  public:
     // TODO : +=, -=
     vector_iterator() = default;
 
-    vector_iterator(const my_vector<T>& other, std::list<T>::iterator inner, 
-        std::list<std::list<T>>::iterator outer, const std::list<T>& cur_elem)
-        : associated_vector(make_shared<my_vector<T>>(other))
+    vector_iterator(const my_vector<T>& other, typename std::list<T>::iterator inner, 
+        typename std::list<std::list<T>>::iterator outer, const std::list<T>& cur_elem)
+        : associated_vector(std::make_shared<my_vector<T>>(other))
         , inner_iterator(inner)
         , outer_iterator(outer)
         , current_element_for_inner(cur_elem)
     {}
 
     vector_iterator& operator++() {
+        ++inner_iterator;
         if (inner_iterator == (*current_element_for_inner).end()) {
             ++outer_iterator;
             current_element_for_inner = *outer_iterator;
             inner_iterator = (*outer_iterator).begin();
-            return (*this);
-        } else {
-            ++inner_iterator;
-            return (*this);
         }
+        return (*this);        
     }
 
     vector_iterator operator++(int) {
@@ -46,11 +47,11 @@ class vector_iterator: public std::iterator<
     }
 
     vector_iterator& operator--() {
-        if (inner_iterator == (*current_element_for_inner).begin()
+        if (inner_iterator == current_element_for_inner.begin()
             && outer_iterator == (*associated_vector).begin()) {
             --inner_iterator;
             return (*this);
-        } else if (inner_iterator == (*current_element_for_inner).begin()) {
+        } else if (inner_iterator == current_element_for_inner.begin()) {
             --outer_iterator;
             inner_iterator = --(*outer_iterator).end();
             current_element_for_inner = *outer_iterator;
@@ -67,6 +68,10 @@ class vector_iterator: public std::iterator<
         return tmp;
     }
 
+    vector_iterator operator+=(size_t shift);
+
+    vector_iterator operator-=(size_t shift);
+
     const T& operator* () const {
         return *inner_iterator;
     }
@@ -77,13 +82,12 @@ class vector_iterator: public std::iterator<
 };
 
 
-template <typename T>
+template <class T>
 class my_vector {
- private:
-    using list = std::list;
     using size_t = std::size_t;
-    using literator = std::list<T>::iterator;
-    list<list<T>> _data;
+    using literator = typename std::list<T>::iterator; 
+ private:
+    std::list<std::list<T>> _data;
     size_t _size;
     const size_t _MAX_FOR_ONE_LIST = 128;
     friend class vector_iterator<T>;
@@ -93,6 +97,18 @@ class my_vector {
             // TODO
             if (_data.size() == 1) {
                 return;
+            } else {
+                literator it = _data.begin();
+                ++it;
+                for (; it != _data.end(); ++it) {
+                    auto cur_list = *it;
+                    for (auto& el : cur_list) {
+                        (*_data.begin()).push_back(el);
+                    }
+                }
+                while (_data.size() > 1) {
+                    _data.pop_back();
+                }
             }
 
         } else {
@@ -102,7 +118,7 @@ class my_vector {
 
     void add_back(T& value) noexcept {
         if (_data.empty()) {
-            _data.push_back(list<T>());
+            _data.push_back(std::list<T>());
         }
         _data.back().push_back(value);
     }
@@ -119,13 +135,13 @@ class my_vector {
             }
         }
         if (it == _data.end()) {
-            throw std::out_of_range();
+            throw std::out_of_range("Out of container's bounds");
         }
     };
 
     T& get_element_by_pos(size_t pos) const {
         auto tmp = get_bucket_by_pos(pos);
-        pos -= it.second;
+        pos -= tmp.second;
         literator it = tmp.first.begin();
         while (pos --> 0) {
             ++it;
@@ -134,7 +150,7 @@ class my_vector {
     }
 
  public:
-    using iterator = vector_iterator;
+    using iterator = vector_iterator<T>;
     explicit my_vector() = default;
 
     explicit my_vector(size_t count, const T& value = T()) {
@@ -178,14 +194,14 @@ class my_vector {
 
     T& at(size_t pos) {
         if (!(pos < _size)) {
-            throw std::out_of_range();
+            throw std::out_of_range("Wrong index");
         }
         return get_element_by_pos(pos);
     };
 
     const T& at(size_t pos) const {
         if (!(pos < _size)) {
-            throw std::out_of_range();
+            throw std::out_of_range("Wrong index");
         }
         return get_element_by_pos(pos);
     };
@@ -200,35 +216,37 @@ class my_vector {
 
     T& front() {
         if (_data.empty() || _data.front().empty()) {
-            throw std::out_of_range();
+            throw std::out_of_range("Empty container");
         }
         return _data.front().front();
     };
 
     const T& front() const {
         if (_data.empty() || _data.front().empty()) {
-            throw std::out_of_range();
+            throw std::out_of_range("Empty container");
         }
         return _data.front().front();
     };
 
     T& back() {
         if (_data.empty() || _data.back().empty()) {
-            throw std::out_of_range();
+            throw std::out_of_range("Empty container");
         }
         return _data.back().back();
     };
 
     const T& back() const {
         if (_data.empty() || _data.back().empty()) {
-            throw std::out_of_range();
+            throw std::out_of_range("Empty container");
         }
         return _data.back().back();
     };
 
     // iterators
 
-    iterator begin() noexcept;
+    iterator begin() noexcept {
+        return vector_iterator<T>(this, (*_data.begin()).begin(), _data.begin(), (*_data.begin()));
+    };
 
     const_iterator begin() const noexcept;
 
@@ -268,7 +286,7 @@ class my_vector {
 
     size_t capacity() const noexcept = delete;
 
-    void shrink_to_fit() = delete();
+    void shrink_to_fit() = delete;
 
     // modifiers
 
