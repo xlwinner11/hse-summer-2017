@@ -68,9 +68,48 @@ class vector_iterator: public std::iterator<
         return tmp;
     }
 
-    vector_iterator operator+=(size_t shift);
+    vector_iterator operator+=(size_t shift) {
+        while (shift --> 0 && inner_iterator != (*current_element_for_inner).end()) {
+            ++inner_iterator;
+        }
+        if (inner_iterator == (*current_element_for_inner).end()) {
+            ++outer_iterator;
+            inner_iterator = (*outer_iterator).begin();
+            current_element_for_inner = (*outer_iterator);
+        }
+        while ((*outer_iterator).size() < shift) {
+            shift -= (*outer_iterator).size();
+            ++outer_iterator;
+            inner_iterator = (*outer_iterator).begin();
+            current_element_for_inner = (*outer_iterator);    
+        }
+        while (shift --> 0) {
+            ++inner_iterator;
+        }
+        return (*this);
+    };
 
-    vector_iterator operator-=(size_t shift);
+    vector_iterator operator-=(size_t shift) {
+        while (shift --> 0 && inner_iterator != (*current_element_for_inner).begin()) {
+            --inner_iterator;
+        }
+        if (shift == 0) {
+            return (*this);
+        }
+        --outer_iterator;
+        inner_iterator = --(*outer_iterator).end();
+        current_element_for_inner = *outer_iterator;
+        while ((*outer_iterator).size() < shift) {
+            shift -= (*outer_iterator).size();
+            --outer_iterator;
+            inner_iterator = --(*outer_iterator).end();
+            current_element_for_inner = *outer_iterator;
+        }
+        while (shift --> 0) {
+            --inner_iterator;
+        }
+        return (*this);
+    };
 
     const T& operator* () const {
         return *inner_iterator;
