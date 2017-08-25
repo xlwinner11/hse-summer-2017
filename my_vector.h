@@ -19,7 +19,6 @@ class vector_iterator: public std::iterator<
     std::list<T>& current_element_for_inner;
 
  public:
-    // TODO : +=, -=
     vector_iterator() = default;
 
     vector_iterator(const my_vector<T>& other, typename std::list<T>::iterator inner, 
