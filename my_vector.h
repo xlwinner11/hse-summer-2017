@@ -79,6 +79,13 @@ class vector_iterator: public std::iterator<
     const T& operator->() const {
         return &(*inner_iterator);
     }
+
+    bool operator==(vector_iterator<T>& other) const {
+        return associated_vector == other.associated_vector &&
+            inner_iterator == other.inner_iterator &&
+            outer_iterator == other.outer_iterator &&
+            current_element_for_inner == other.current_element_for_inner;
+    }
 };
 
 
@@ -110,7 +117,6 @@ class my_vector {
                     _data.pop_back();
                 }
             }
-
         } else {
             // TODO
         }
@@ -139,6 +145,22 @@ class my_vector {
         }
     };
 
+    size_t index_by_iterator(vector_iterator<T> iter) const {
+        size_t index = 0;
+        vector_iterator<T> cur = (*this).begin();
+        while (cur.outer_iterator != iter.outer_iterator) {
+            index += ((*cur.outer_iterator).size());
+            ++cur.outer_iterator;
+            cur.inner_iterator = (*cur.outer_iterator).begin();
+            cur.current_element_for_inner = (*cur.outer_iterator);
+        }
+        while (cur.inner_iterator != iter.inner_iterator) {
+            ++inner_iterator;
+            ++index;
+        }
+        return index;
+    }
+
     T& get_element_by_pos(size_t pos) const {
         auto tmp = get_bucket_by_pos(pos);
         pos -= tmp.second;
@@ -147,6 +169,20 @@ class my_vector {
             ++it;
         }
         return (*it);
+    }
+
+    vector_iterator<T> build_iterator(size_t index) {
+        vector_iterator<T> cur = (*this).begin();
+        while ((*cur.outer_iterator).size() < index) {
+            index -= (*cur.outer_iterator).size();
+            ++cur.outer_iterator;
+            cur.inner_iterator = (*cur.outer_iterator).begin();
+            cur.current_element_for_inner = (*cur.outer_iterator);    
+        }
+        while (index --> 0) {
+            ++cur.inner_iterator;
+        }
+        return cur;
     }
 
  public:
@@ -297,18 +333,49 @@ class my_vector {
         }
     };
 
-    iterator insert(iterator pos, const T& value);
+    iterator insert(iterator pos, const T& value) {
+        size_t index = index_by_iterator(pos);
+        (*pos.outer_iterator).insert(pos.inner_iterator, value);
+        rebalance();
+        return build_iterator(index);
+    };
 
-    iterator insert(const_iterator pos, const T& value);
+    iterator insert(const_iterator pos, const T& value) {
+        size_t index = index_by_iterator(pos);
+        (*pos.outer_iterator).insert(pos.inner_iterator, value);
+        rebalance();
+        return build_iterator(index);
+    };
 
-    iterator insert(const_iterator pos, T&& value);
+    iterator insert(const_iterator pos, T&& value) {
+        size_t index = index_by_iterator(pos);
+        (*pos.outer_iterator).insert(pos.inner_iterator, value);
+        rebalance();
+        return build_iterator(index);
+    };
 
-    iterator insert(iterator pos, size_t count, const T& value);
+    iterator insert(iterator pos, size_t count, const T& value) {
+        size_t index = index_by_iterator(pos);
+        while (count --> 0) {
+            (*pos.outer_iterator).insert(pos.inner_iterator, value);
+        }
+        rebalance():
+        return build_iterator(index);
+    };
 
     template <class input_iterator>
-    iterator insert(const_iterator pos, input_iterator first, input_iterator last);
+    iterator insert(const_iterator pos, input_iterator first, input_iterator last) {
+        while (first != last) {
+            (*pos.outer_iterator).insert(pos.inner_iterator, value);
+            ++first;
+        }
+        rebalance();
+        return build_iterator(index);
+    };
 
-    iterator insert(const_iterator pos, std::initializer_list<T> ilist);
+    iterator insert(const_iterator pos, std::initializer_list<T> ilist) {
+        return insert(pos, ilist.begin(), ilist.end());
+    };
 
     iterator erase(const_iterator pos);
 
@@ -325,11 +392,11 @@ class my_vector {
 
     void push_back(T&& value);
 
-    template <class... Args>
-    iterator emplace(const_iterator pos, Args&&... args);
+    // template <class... Args>
+    // iterator emplace(const_iterator pos, Args&&... args);
 
-    template <class... Args>
-    Args& emplace_back(Args&&... args);
+    // template <class... Args>
+    // Args& emplace_back(Args&&... args);
 
     void pop_back() {
         if (!_data.empty()) {
