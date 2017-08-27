@@ -489,6 +489,7 @@ class my_vector {
         while (!_data.empty()) {
             _data.back().clear();
             _data.pop_back();
+            size = 0;
         }
     };
 
@@ -496,6 +497,7 @@ class my_vector {
         size_t index = index_by_iterator(pos);
         (*pos.outer_iterator).insert(pos.inner_iterator, value);
         rebalance();
+        ++_size;
         return build_iterator(index);
     };
 
@@ -503,6 +505,7 @@ class my_vector {
         size_t index = index_by_iterator(pos);
         (*pos.outer_iterator).insert(pos.inner_iterator, value);
         rebalance();
+        ++_size;
         return build_iterator(index);
     };
 
@@ -510,6 +513,7 @@ class my_vector {
         size_t index = index_by_iterator(pos);
         (*pos.outer_iterator).insert(pos.inner_iterator, value);
         rebalance();
+        ++_size;
         return build_iterator(index);
     };
 
@@ -517,6 +521,7 @@ class my_vector {
         size_t index = index_by_iterator(pos);
         while (count --> 0) {
             (*pos.outer_iterator).insert(pos.inner_iterator, value);
+            ++_size;
         }
         rebalance();
         return build_iterator(index);
@@ -528,6 +533,7 @@ class my_vector {
         while (first != last) {
             (*pos.outer_iterator).insert(pos.inner_iterator, (*first));
             ++first;
+            ++_size;
         }
         rebalance();
         return build_iterator(index);
@@ -541,6 +547,7 @@ class my_vector {
         size_t index = index_by_iterator(pos);
         (*pos.outer_iterator).erase(pos.inner_iterator);
         rebalance();
+        --_size;
         return build_iterator(index);
     };
 
@@ -549,6 +556,7 @@ class my_vector {
         while (first != last) {
             erase_no_rebalance(first);
             ++first;
+            --_size;
         }
         rebalance();
         return build_iterator(index);
