@@ -458,22 +458,62 @@ class my_vector {
 };
 
 template<class T>
-bool operator==(my_vector<T>& first, my_vector<T>& second);
+bool operator==(my_vector<T>& first, my_vector<T>& second) {
+    if (first.size() != second.size()) {
+        return false;
+    }
+    auto it1 = first.begin(), it2 = second.begin();
+    while (it1 != first.end()) {
+        if ((*it1) != (*it2)) {
+            return false;
+        }
+        ++it1;
+        ++it2;
+    }
+    return true;
+};
 
 template<class T>
-bool operator!=(my_vector<T>& first, my_vector<T>& second);
+bool operator!=(my_vector<T>& first, my_vector<T>& second) {
+    return !(first == second);
+};
 
 template<class T>
-bool operator<(my_vector<T>& first, my_vector<T>& second);
+bool operator<(my_vector<T>& first, my_vector<T>& second) {
+    auto it1 = first.begin(), it2 = second.begin();
+    while (it1 != first.end() && it2 != second.end()) {
+        if ((*it1) < (*it2)) {
+            return true;
+        } else if ((*it1) == (*it2)) {
+            return false;
+        }
+        ++it1;
+        ++it2;
+    }
+    if (it1 == first.end()) {
+        return true;
+    } else {
+        return false;
+    }
+};
 
 template<class T>
-bool operator<=(my_vector<T>& first, my_vector<T>& second);
+bool operator<=(my_vector<T>& first, my_vector<T>& second) {
+    if (first == second) {
+        return true;
+    }
+    return first < second;
+};
 
 template<class T>
-bool operator>(my_vector<T>& first, my_vector<T>& second);
+bool operator>(my_vector<T>& first, my_vector<T>& second) {
+    return !(first <= second);
+};
 
 template<class T>
-bool operator>=(my_vector<T>& first, my_vector<T>& second);
+bool operator>=(my_vector<T>& first, my_vector<T>& second) {
+    return !(first < second);
+}
 
 template <class T>
 void swap(my_vector<T>& left, my_vector<T>& right) {
