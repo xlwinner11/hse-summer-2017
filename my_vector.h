@@ -52,7 +52,7 @@ class vector_iterator: public std::iterator<
             return (*this);
         } else if (inner_iterator == current_element_for_inner.begin()) {
             --outer_iterator;
-            inner_iterator = --(*outer_iterator).end();
+            inner_iterator = --((*outer_iterator).end());
             current_element_for_inner = *outer_iterator;
             return (*this);
         } else {
@@ -96,12 +96,12 @@ class vector_iterator: public std::iterator<
             return (*this);
         }
         --outer_iterator;
-        inner_iterator = --(*outer_iterator).end();
+        inner_iterator = --((*outer_iterator).end());
         current_element_for_inner = *outer_iterator;
         while ((*outer_iterator).size() < shift) {
             shift -= (*outer_iterator).size();
             --outer_iterator;
-            inner_iterator = --(*outer_iterator).end();
+            inner_iterator = --((*outer_iterator).end());
             current_element_for_inner = *outer_iterator;
         }
         while (shift --> 0) {
@@ -139,7 +139,6 @@ class my_vector {
 
     void rebalance() noexcept { // TODO : deletion of empty blocks
         if (_size <= _MAX_FOR_ONE_LIST) {
-            // TODO
             if (_data.size() == 1) {
                 return;
             } else {
@@ -221,6 +220,10 @@ class my_vector {
             ++cur.inner_iterator;
         }
         return cur;
+    }
+
+    void erase_no_rebalance(iterator pos) {
+        (*pos.outer_iterator).erase(inner_iterator);
     }
 
  public:
@@ -354,14 +357,6 @@ class my_vector {
         return _size;
     };
 
-    size_t max_size() const noexcept = delete;
-
-    void reserve(size_t new_capacity) = delete;
-
-    size_t capacity() const noexcept = delete;
-
-    void shrink_to_fit() = delete;
-
     // modifiers
 
     void clear() noexcept {
@@ -403,6 +398,7 @@ class my_vector {
 
     template <class input_iterator>
     iterator insert(const_iterator pos, input_iterator first, input_iterator last) {
+        size_t index = index_by_iterator(pos);
         while (first != last) {
             (*pos.outer_iterator).insert(pos.inner_iterator, value);
             ++first;
@@ -415,9 +411,22 @@ class my_vector {
         return insert(pos, ilist.begin(), ilist.end());
     };
 
-    iterator erase(const_iterator pos);
+    iterator erase(const_iterator pos) {
+        size_t index = index_by_iterator(pos);
+        (*outer_iterator).erase(inner_iterator);
+        rebalance();
+        return build_iterator(index);
+    };
 
-    iterator erase(iterator first, iterator last);
+    iterator erase(iterator first, iterator last) {
+        size_t index = index_by_iterator(pos);
+        while (first != last) {
+            erase_no_rebalance(first);
+            ++first;
+        }
+        rebalance();
+        return build_iterator(index);
+    };
 
     void push_back(const T& value) {
         if (_data.empty()) {
@@ -430,12 +439,6 @@ class my_vector {
 
     void push_back(T&& value);
 
-    // template <class... Args>
-    // iterator emplace(const_iterator pos, Args&&... args);
-
-    // template <class... Args>
-    // Args& emplace_back(Args&&... args);
-
     void pop_back() {
         if (!_data.empty()) {
             _data.back().pop_back();
@@ -446,10 +449,6 @@ class my_vector {
             rebalance();
         }
     };
-
-    void resize(size_t new_size) = delete;
-
-    void resize(size_t new_size, const T& value) = delete;
 
     void swap(my_vector& other) {
         std::swap(_data, other._data);
