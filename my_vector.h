@@ -131,6 +131,7 @@ template <class T>
 class my_vector {
     using size_t = std::size_t;
     using literator = typename std::list<T>::iterator; 
+    using iterator = vector_iterator<T>;
  private:
     std::list<std::list<T>> _data;
     size_t _size;
@@ -182,9 +183,9 @@ class my_vector {
         }
     };
 
-    size_t index_by_iterator(vector_iterator<T> iter) const {
+    size_t index_by_iterator(iterator iter) const {
         size_t index = 0;
-        vector_iterator<T> cur = (*this).begin();
+        iterator cur = (*this).begin();
         while (cur.outer_iterator != iter.outer_iterator) {
             index += ((*cur.outer_iterator).size());
             ++cur.outer_iterator;
@@ -192,7 +193,7 @@ class my_vector {
             cur.current_element_for_inner = (*cur.outer_iterator);
         }
         while (cur.inner_iterator != iter.inner_iterator) {
-            ++inner_iterator;
+            ++cur.inner_iterator;
             ++index;
         }
         return index;
@@ -223,11 +224,10 @@ class my_vector {
     }
 
     void erase_no_rebalance(iterator pos) {
-        (*pos.outer_iterator).erase(inner_iterator);
+        (*pos.outer_iterator).erase(pos.inner_iterator);
     }
 
  public:
-    using iterator = vector_iterator<T>;
     explicit my_vector() = default;
 
     explicit my_vector(size_t count, const T& value = T()) {
@@ -392,7 +392,7 @@ class my_vector {
         while (count --> 0) {
             (*pos.outer_iterator).insert(pos.inner_iterator, value);
         }
-        rebalance():
+        rebalance();
         return build_iterator(index);
     };
 
@@ -400,7 +400,7 @@ class my_vector {
     iterator insert(const_iterator pos, input_iterator first, input_iterator last) {
         size_t index = index_by_iterator(pos);
         while (first != last) {
-            (*pos.outer_iterator).insert(pos.inner_iterator, value);
+            (*pos.outer_iterator).insert(pos.inner_iterator, (*first));
             ++first;
         }
         rebalance();
@@ -413,13 +413,13 @@ class my_vector {
 
     iterator erase(const_iterator pos) {
         size_t index = index_by_iterator(pos);
-        (*outer_iterator).erase(inner_iterator);
+        (*pos.outer_iterator).erase(pos.inner_iterator);
         rebalance();
         return build_iterator(index);
     };
 
     iterator erase(iterator first, iterator last) {
-        size_t index = index_by_iterator(pos);
+        size_t index = index_by_iterator(first);
         while (first != last) {
             erase_no_rebalance(first);
             ++first;
