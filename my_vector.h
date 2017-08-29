@@ -27,7 +27,7 @@ class const_vector_iterator: public std::iterator<
     const_vector_iterator() = default;
 
     const_vector_iterator(const my_vector<T>& other, typename std::list<T>::const_iterator inner, 
-        typename std::list<std::list<T>>::const_iterator outer, std::list<T>& cur_elem)
+        typename std::list<std::list<T>>::const_iterator outer, const std::list<T>& cur_elem)
         : associated_vector(std::make_shared<my_vector<T>>(other))
         , inner_iterator(inner)
         , outer_iterator(outer)
@@ -35,7 +35,7 @@ class const_vector_iterator: public std::iterator<
     {}
 
     const_vector_iterator(const my_vector<T>& other, typename std::list<T>::iterator inner, 
-        typename std::list<std::list<T>>::iterator outer, std::list<T>& cur_elem)
+        typename std::list<std::list<T>>::iterator outer, const std::list<T>& cur_elem)
         : associated_vector(std::make_shared<my_vector<T>>(other))
         , inner_iterator(inner)
         , outer_iterator(outer)
@@ -183,7 +183,7 @@ class vector_iterator: public const_vector_iterator<T> {
     vector_iterator() = default;
 
     vector_iterator(const my_vector<T>& other, typename std::list<T>::iterator inner, 
-        typename std::list<std::list<T>>::iterator outer, std::list<T>& cur_elem)
+        typename std::list<std::list<T>>::iterator outer, const std::list<T>& cur_elem)
         : associated_vector(std::make_shared<my_vector<T>>(other))
         , inner_iterator(inner)
         , outer_iterator(outer)
@@ -461,11 +461,23 @@ class my_vector {
 
     ~ my_vector(){};
 
-    my_vector& operator=(const my_vector& other);
+    my_vector& operator=(const my_vector& other) {
+        my_vector<T> tmp(*this);
+        tmp.swap(*this);
+        return (*this);
+    };
 
-    my_vector& operator=(std::initializer_list<T> ilist);
+    my_vector& operator=(std::initializer_list<T> ilist) {
+        my_vector<T> tmp(ilist.begin(), ilist.end());
+        tmp.swap(*this);
+        return (*this);
+    };
 
-    my_vector& operator=(my_vector&& other);
+    my_vector& operator=(my_vector&& other) {
+        _data = std::move(other._data);
+        _size = std::move(other,_size);
+        return (*this);
+    };
 
     void assign(size_t count, const T& value) {
         clear();
@@ -542,7 +554,7 @@ class my_vector {
     };
 
     const_iterator begin() const noexcept {
-        // ???
+        return const_vector_iterator<T>((*this), (*_data.begin()).begin(), (_data.begin()), (*_data.begin()));
     };
 
     const_iterator cbegin() const noexcept;
