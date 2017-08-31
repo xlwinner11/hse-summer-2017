@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cmath>
 #include <initializer_list>
 #include <list>
@@ -435,7 +436,7 @@ class my_vector {
  private:
     std::list<std::list<T>> _data;
     size_t _size;
-    static const size_t _MAX_FOR_ONE_LIST = 128;
+    static const size_t _MAX_FOR_ONE_LIST = 64;
     friend class vector_iterator<T>;
     friend class const_vector_iterator<T>;
 
@@ -492,6 +493,13 @@ class my_vector {
                 }
                 buffer.clear();
             }
+        }
+    }
+
+    void recalc_size() noexcept {
+        _size = 0;
+        for (const auto& el : _data) {
+            _size += el.size();
         }
     }
 
@@ -807,26 +815,36 @@ class my_vector {
         return insert(pos, ilist.begin(), ilist.end());
     };
 
-    iterator erase(const_iterator cpos) {
-        auto tmp = get_non_const(cpos);
-        vector_iterator<T>& pos = tmp.first;
-        size_t index = tmp.second;
-        (*pos.outer_iterator).erase(pos.inner_iterator);
+    iterator erase(iterator first, iterator last) {
+        size_t index = index_by_iterator(first);
+        if (first.outer_iterator == last.outer_iterator) {
+            (*first.outer_iterator).erase(first.inner_iterator, last.inner_iterator);
+        } else {
+            while (first.inner_iterator != (*first.outer_iterator).end()) {
+                first.inner_iterator = (*first.outer_iterator).erase(first.inner_iterator);
+            }
+            ++first;
+            while (first.outer_iterator != last.outer_iterator) {
+                auto prev = first.outer_iterator;
+                ++first.outer_iterator;
+                first.inner_iterator = (*first.outer_iterator).begin();
+                first.current_element_for_inner = &(*first.outer_iterator);
+                _data.erase(prev);
+            }
+            while (first.inner_iterator != last.inner_iterator) {
+                first.inner_iterator = (*first.outer_iterator).erase(first.inner_iterator);
+            }
+        }
+        recalc_size();
         rebalance();
-        --_size;
         return build_iterator(index);
     };
 
-    iterator erase(iterator first, iterator last) {
-        size_t index = index_by_iterator(first);
-        while (first != last) {
-            erase_no_rebalance(first);
-            ++first;
-            --_size;
-        }
-        rebalance();
-        return build_iterator(index);
+    iterator erase(const_iterator cpos) {
+        auto pos = get_non_const(cpos).first;
+        return erase(pos, pos + 1);
     };
+
 
     void push_back(const T& value) {
         if (_data.empty()) {
