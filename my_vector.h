@@ -16,10 +16,10 @@ template <class T>
 class const_vector_iterator: public std::iterator<
     std::random_access_iterator_tag, T> {
  private:
-    const std::shared_ptr<my_vector<T>> associated_vector;
-    typename std::list<T>::iterator inner_iterator;
-    typename std::list<std::list<T>>::iterator outer_iterator;
-    std::shared_ptr<std::list<T>> current_element_for_inner;
+    const my_vector<T>* associated_vector;
+    typename std::list<T>::const_iterator inner_iterator;
+    typename std::list<std::list<T>>::const_iterator outer_iterator;
+    const std::list<T>* current_element_for_inner;
 
  public:
     friend class my_vector<T>;
@@ -28,26 +28,20 @@ class const_vector_iterator: public std::iterator<
 
     const_vector_iterator(const my_vector<T>& other, typename std::list<T>::const_iterator inner, 
         typename std::list<std::list<T>>::const_iterator outer, const std::list<T>& cur_elem)
-        : associated_vector(std::make_shared<my_vector<T>>(other))
-        , inner_iterator(inner)
-        , outer_iterator(outer)
-        , current_element_for_inner(std::make_shared<std::list<T>>(cur_elem))
-    {}
+    {
+        associated_vector = &other;
+        inner_iterator = inner;
+        outer_iterator = outer;
+        current_element_for_inner = &cur_elem;
+    }
 
-    const_vector_iterator(const my_vector<T>& other, typename std::list<T>::iterator inner, 
-        typename std::list<std::list<T>>::iterator outer, const std::list<T>& cur_elem)
-        : associated_vector(std::make_shared<my_vector<T>>(other))
-        , inner_iterator(inner)
-        , outer_iterator(outer)
-        , current_element_for_inner(std::make_shared<std::list<T>>(cur_elem))
-    {}
-
-    const_vector_iterator(const my_vector<T>& other, typename std::list<T>::iterator inner, 
-        typename std::list<std::list<T>>::iterator outer)
-        : associated_vector(std::make_shared<my_vector<T>>(other))
-        , inner_iterator(inner)
-        , outer_iterator(outer)
-    {}
+    const_vector_iterator(const my_vector<T>& other, typename std::list<T>::const_iterator inner, 
+        typename std::list<std::list<T>>::const_iterator outer)
+    {
+        associated_vector = &other;
+        inner_iterator = inner;
+        outer_iterator = outer;
+    }
 
     const_vector_iterator<T>(const vector_iterator<T>& other)
         : associated_vector(other.associated_vector)
@@ -61,7 +55,7 @@ class const_vector_iterator: public std::iterator<
         if (inner_iterator == (*current_element_for_inner).end()) {
             ++outer_iterator;
             if (outer_iterator != (*associated_vector)._data.end()) {
-                current_element_for_inner = std::make_shared<std::list<T>>(*outer_iterator);
+                current_element_for_inner = &(*outer_iterator);
                 inner_iterator = (*outer_iterator).begin();
             }
         }
@@ -75,16 +69,21 @@ class const_vector_iterator: public std::iterator<
     }
 
     const_vector_iterator& operator--() {
-        if (inner_iterator == (*current_element_for_inner).begin()
-            && outer_iterator == (*associated_vector).begin()) {
+        if (outer_iterator == (*associated_vector)._data.end()) {
+            --outer_iterator;
+            inner_iterator = --((*outer_iterator).end());
+            current_element_for_inner = &(*outer_iterator);
+        } else if (inner_iterator == (*current_element_for_inner).begin() &&
+            outer_iterator == (*associated_vector)._data.begin()) {
             --inner_iterator;
         } else if (inner_iterator == (*current_element_for_inner).begin()) {
             --outer_iterator;
             inner_iterator = --((*outer_iterator).end());
-            current_element_for_inner = std::make_shared<std::list<T>>(*outer_iterator);
+            current_element_for_inner = &(*outer_iterator);
         } else {
             --inner_iterator;
         }
+
         return (*this);
     }
 
@@ -95,49 +94,62 @@ class const_vector_iterator: public std::iterator<
     }
 
     const_vector_iterator operator+=(size_t shift) {
-        while (shift --> 0 && inner_iterator != (*current_element_for_inner).end()) {
+        while (shift != 0 && inner_iterator != (*current_element_for_inner).end()) {
             ++inner_iterator;
+            --shift;
         }
         if (inner_iterator == (*current_element_for_inner).end()) {
             ++outer_iterator;
             inner_iterator = (*outer_iterator).begin();
-            current_element_for_inner = std::make_shared<std::list<T>>(*outer_iterator);
+            current_element_for_inner = &(*outer_iterator);
         }
         while ((*outer_iterator).size() < shift) {
             shift -= (*outer_iterator).size();
             ++outer_iterator;
             inner_iterator = (*outer_iterator).begin();
-            current_element_for_inner = std::make_shared<std::list<T>>(*outer_iterator);    
+            current_element_for_inner = &(*outer_iterator);    
         }
-        while (shift --> 0) {
+        while (shift != 0) {
             ++inner_iterator;
+            --shift;
         }
         return (*this);
     };
 
     const_vector_iterator operator+ (size_t shift) {
         const_vector_iterator tmp(*this);
-        tmp += shift;
+        if (shift > 0)
+            tmp += shift;
+        else 
+            tmp -= -shift;
         return tmp;
     }
 
     const_vector_iterator operator-=(size_t shift) {
-        while (shift --> 0 && inner_iterator != (*current_element_for_inner).begin()) {
+        if (outer_iterator == (*associated_vector)._data.end()) {
+            --outer_iterator;
+            inner_iterator = --((*outer_iterator).end());
+            current_element_for_inner = &(*outer_iterator);
+            --shift;
+        }
+        while (shift != 0 && inner_iterator != (*current_element_for_inner).begin()) {
             --inner_iterator;
+            --shift;
         }
         if (shift == 0) {
             return (*this);
         }
         --outer_iterator;
         inner_iterator = --((*outer_iterator).end());
-        current_element_for_inner = std::make_shared<std::list<T>>(*outer_iterator);
+        current_element_for_inner = &(*outer_iterator);
         while ((*outer_iterator).size() < shift) {
             shift -= (*outer_iterator).size();
             --outer_iterator;
             inner_iterator = --((*outer_iterator).end());
-            current_element_for_inner = std::make_shared<std::list<T>>(*outer_iterator);
+            current_element_for_inner = &(*outer_iterator);
         }
-        while (shift --> 0) {
+        while (shift != 0) {
+            --shift;
             --inner_iterator;
         }
         return (*this);
@@ -145,8 +157,37 @@ class const_vector_iterator: public std::iterator<
 
     const_vector_iterator operator- (size_t shift) {
         const_vector_iterator tmp(*this);
-        tmp -= shift;
+        if (shift > 0)
+            tmp -= shift;
+        else 
+            tmp += -shift;
         return tmp;
+    }
+
+    int operator- (const const_vector_iterator& other) {
+        const_vector_iterator tmp(*this);
+        int dist1 = 0, dist2 = 0;
+        while (tmp.inner_iterator != (*tmp.current_element_for_inner).begin()) {
+            --tmp;
+            ++dist1;
+        }
+        while (tmp.outer_iterator != (*associated_vector)._data.begin()) {
+            dist1 += (*tmp.outer_iterator).size();
+            --tmp.outer_iterator;
+        }
+
+        const_vector_iterator tmp2(other);
+
+        while (tmp2.inner_iterator != (*tmp2.current_element_for_inner).begin()) {
+            --tmp2;
+            ++dist2;
+        }
+        while (tmp2.outer_iterator != (*associated_vector)._data.begin()) {
+            dist2 += (*tmp2.outer_iterator).size();
+            --tmp2.outer_iterator;
+        }
+
+        return dist1 - dist2;
     }
 
     const T& operator* () const {
@@ -155,6 +196,10 @@ class const_vector_iterator: public std::iterator<
 
     const T& operator->() const {
         return &(*inner_iterator);
+    }
+
+    bool operator< (const const_vector_iterator<T>& other) const {
+        return other - (*this) > 0;
     }
 
     bool operator==(const const_vector_iterator<T>& other) const {
@@ -170,46 +215,58 @@ class const_vector_iterator: public std::iterator<
 };
 
 template <class T>
-class vector_iterator: public const_vector_iterator<T> {
+class vector_iterator: public std::iterator<
+    std::random_access_iterator_tag, T>{
  private:
-    const std::shared_ptr<my_vector<T>> associated_vector;
+    my_vector<T>* associated_vector;
     typename std::list<T>::iterator inner_iterator;
     typename std::list<std::list<T>>::iterator outer_iterator;
-    std::shared_ptr<std::list<T>> current_element_for_inner;
+    std::list<T>* current_element_for_inner;
 
  public:
     friend class my_vector<T>;
     friend class const_vector_iterator<T>;
     vector_iterator() = default;
 
-    vector_iterator(const my_vector<T>& other, typename std::list<T>::iterator inner, 
-        typename std::list<std::list<T>>::iterator outer, const std::list<T>& cur_elem)
-        : associated_vector(std::make_shared<my_vector<T>>(other))
-        , inner_iterator(inner)
-        , outer_iterator(outer)
-        , current_element_for_inner(std::make_shared<std::list<T>>(cur_elem))
-    {}
+    vector_iterator(my_vector<T>& other, typename std::list<T>::iterator inner, 
+        typename std::list<std::list<T>>::iterator outer, std::list<T>& cur_elem)
+    {
+        associated_vector = &other;
+        inner_iterator = inner;
+        outer_iterator = outer;
+        current_element_for_inner = &cur_elem;
+    }
 
-    vector_iterator(const my_vector<T>& other, typename std::list<T>::iterator inner, 
+    vector_iterator(my_vector<T>& other, typename std::list<T>::iterator inner, 
         typename std::list<std::list<T>>::iterator outer)
-        : associated_vector(std::make_shared<my_vector<T>>(other))
-        , inner_iterator(inner)
-        , outer_iterator(outer)
-    {}
+    {
+        associated_vector = &other;
+        inner_iterator = inner;
+        outer_iterator = outer;
+    }
 
-    vector_iterator<T>(const const_vector_iterator<T>& other)
-        : associated_vector(other.associated_vector)
-        , inner_iterator(other.inner_iterator)
-        , outer_iterator(other.outer_iterator)
-        , current_element_for_inner(other.current_element_for_inner)
-    {}
+    vector_iterator<T> operator=(const vector_iterator<T>& other) {
+        associated_vector = other.associated_vector;
+        inner_iterator = other.inner_iterator;
+        outer_iterator = other.outer_iterator;
+        current_element_for_inner = other.current_element_for_inner;
+        return (*this);
+    }
+
+    vector_iterator<T> operator=(const const_vector_iterator<T>& other) {
+        associated_vector = other.associated_vector;
+        inner_iterator = other.inner_iterator;
+        outer_iterator = other.outer_iterator;
+        current_element_for_inner = other.current_element_for_inner;
+        return (*this);
+    }
 
     vector_iterator& operator++() {
         ++inner_iterator;
         if (inner_iterator == (*current_element_for_inner).end()) {
             ++outer_iterator;
             if (outer_iterator != (*associated_vector)._data.end()) {
-                current_element_for_inner = std::make_shared<std::list<T>>(*outer_iterator);
+                current_element_for_inner = &(*outer_iterator);
                 inner_iterator = (*outer_iterator).begin();
             }
         }
@@ -223,13 +280,17 @@ class vector_iterator: public const_vector_iterator<T> {
     }
 
     vector_iterator& operator--() {
-        if (inner_iterator == (*current_element_for_inner).begin()
-            && outer_iterator == (*associated_vector).begin()) {
+        if (outer_iterator == (*associated_vector)._data.end()) {
+            --outer_iterator;
+            inner_iterator = --((*outer_iterator).end());
+            current_element_for_inner = &(*outer_iterator);
+        } else if (inner_iterator == (*current_element_for_inner).begin() &&
+            outer_iterator == (*associated_vector)._data.begin()) {
             --inner_iterator;
         } else if (inner_iterator == (*current_element_for_inner).begin()) {
             --outer_iterator;
             inner_iterator = --((*outer_iterator).end());
-            current_element_for_inner = std::make_shared<std::list<T>>(*outer_iterator);
+            current_element_for_inner = &(*outer_iterator);
         } else {
             --inner_iterator;
         }
@@ -243,47 +304,101 @@ class vector_iterator: public const_vector_iterator<T> {
     }
 
     vector_iterator operator+=(size_t shift) {
-        while (shift --> 0 && inner_iterator != (*current_element_for_inner).end()) {
+        while (shift != 0 && inner_iterator != (*current_element_for_inner).end()) {
             ++inner_iterator;
+            --shift;
         }
         if (inner_iterator == (*current_element_for_inner).end()) {
             ++outer_iterator;
             inner_iterator = (*outer_iterator).begin();
-            current_element_for_inner = std::make_shared<std::list<T>>(*outer_iterator);
+            current_element_for_inner = &(*outer_iterator);
         }
         while ((*outer_iterator).size() < shift) {
             shift -= (*outer_iterator).size();
             ++outer_iterator;
             inner_iterator = (*outer_iterator).begin();
-            current_element_for_inner = std::make_shared<std::list<T>>(*outer_iterator);    
+            current_element_for_inner = &(*outer_iterator);    
         }
-        while (shift --> 0) {
+        while (shift != 0) {
             ++inner_iterator;
+            --shift;
         }
         return (*this);
     };
 
+    vector_iterator operator+ (size_t shift) {
+        vector_iterator tmp(*this);
+        if (shift > 0)
+            tmp += shift;
+        else 
+            tmp -= -shift;
+        return tmp;
+    }
+
     vector_iterator operator-=(size_t shift) {
-        while (shift --> 0 && inner_iterator != (*current_element_for_inner).begin()) {
+        if (outer_iterator == (*associated_vector)._data.end()) {
+            --outer_iterator;
+            inner_iterator = --((*outer_iterator).end());
+            current_element_for_inner = &(*outer_iterator);
+            --shift;
+        }
+        while (shift != 0 && inner_iterator != (*current_element_for_inner).begin()) {
             --inner_iterator;
+            --shift;
         }
         if (shift == 0) {
             return (*this);
         }
         --outer_iterator;
         inner_iterator = --((*outer_iterator).end());
-        current_element_for_inner = std::make_shared<std::list<T>>(*outer_iterator);
+        current_element_for_inner = &(*outer_iterator);
         while ((*outer_iterator).size() < shift) {
             shift -= (*outer_iterator).size();
             --outer_iterator;
             inner_iterator = --((*outer_iterator).end());
-            current_element_for_inner = std::make_shared<std::list<T>>(*outer_iterator);
+            current_element_for_inner = &(*outer_iterator);
         }
-        while (shift --> 0) {
+        while (shift != 0) {
             --inner_iterator;
+            --shift;
         }
         return (*this);
     };
+
+    vector_iterator operator- (size_t shift) {
+        vector_iterator tmp(*this);
+        if (shift > 0)
+            tmp -= shift;
+        else 
+            tmp += -shift;
+        return tmp;
+    }
+
+    int operator- (const vector_iterator& other) {
+        vector_iterator tmp(*this);
+        int dist1 = 0, dist2 = 0;
+        while (tmp.inner_iterator != (*tmp.current_element_for_inner).begin()) {
+            --tmp;
+            ++dist1;
+        }
+        while (tmp.outer_iterator != (*associated_vector)._data.begin()) {
+            dist1 += (*tmp.outer_iterator).size();
+            --tmp.outer_iterator;
+        }
+
+        vector_iterator tmp2(other);
+
+        while (tmp2.inner_iterator != (*tmp2.current_element_for_inner).begin()) {
+            --tmp2;
+            ++dist2;
+        }
+        while (tmp2.outer_iterator != (*associated_vector)._data.begin()) {
+            dist2 += (*tmp2.outer_iterator).size();
+            --tmp2.outer_iterator;
+        }
+
+        return dist1 - dist2;
+    }
 
     const T& operator* () const {
         return *inner_iterator;
@@ -297,12 +412,14 @@ class vector_iterator: public const_vector_iterator<T> {
         return *inner_iterator;
     }
 
+    bool operator< (vector_iterator<T>& other) {
+        return other - (*this) > 0;
+    }
 
     bool operator==(const vector_iterator<T>& other) const {
         return associated_vector == other.associated_vector &&
             inner_iterator == other.inner_iterator &&
-            outer_iterator == other.outer_iterator &&
-            (*current_element_for_inner) == (*other.current_element_for_inner);
+            outer_iterator == other.outer_iterator;
     }
 
     bool operator!=(const vector_iterator<T>& other) const {
@@ -320,6 +437,7 @@ class my_vector {
     size_t _size;
     static const size_t _MAX_FOR_ONE_LIST = 128;
     friend class vector_iterator<T>;
+    friend class const_vector_iterator<T>;
 
     void rebalance() noexcept {
         if (_size <= _MAX_FOR_ONE_LIST) {
@@ -345,7 +463,7 @@ class my_vector {
                 max_bucket = std::max(max_bucket, el.size());
                 min_bucket = std::min(min_bucket, el.size());
             }
-            if (max_bucket > 2 * min_bucket) {
+            if (_data.size() == 1 || max_bucket > 2 * min_bucket) {
                 size_t bucket_size = floor(sqrt(_size));
                 std::list<T> buffer;
                 for (const auto& outer : _data) {
@@ -379,7 +497,7 @@ class my_vector {
 
     void add_back(const T& value) noexcept {
         if (_data.empty()) {
-            _data.push_back(std::list<T>());
+            _data.emplace_back(std::list<T>());
         }
         ++_size;
         _data.back().push_back(value);
@@ -392,7 +510,7 @@ class my_vector {
             index += ((*cur.outer_iterator).size());
             ++cur.outer_iterator;
             cur.inner_iterator = (*cur.outer_iterator).begin();
-            cur.current_element_for_inner = std::make_shared<std::list<T>>(*cur.outer_iterator);
+            cur.current_element_for_inner = &(*cur.outer_iterator);
         }
         while (cur.inner_iterator != iter.inner_iterator) {
             ++cur.inner_iterator;
@@ -401,26 +519,54 @@ class my_vector {
         return index;
     }
 
-    vector_iterator<T> build_iterator(size_t index) const {
-        vector_iterator<T> cur = (*this).begin();
-        while ((*cur.outer_iterator).size() < index) {
-            index -= (*cur.outer_iterator).size();
-            ++cur.outer_iterator;
-            cur.inner_iterator = (*cur.outer_iterator).begin();
-            cur.current_element_for_inner = std::make_shared<std::list<T>>(*cur.outer_iterator);    
+    vector_iterator<T> build_iterator(size_t index) {
+        auto outer_it = _data.begin();
+        while ((*outer_it).size() < index && outer_it != _data.end()) {
+            index -= (*outer_it).size();
+            ++outer_it;
         }
+        if (outer_it == _data.end()) {
+            throw std::out_of_range("Out of container's bounds");
+        }
+        auto inner_it = (*outer_it).begin();
         while (index --> 0) {
-            ++cur.inner_iterator;
+            ++inner_it;
         }
-        return cur;
+        return vector_iterator<T>((*this), inner_it, outer_it, (*outer_it));
     }
 
-    T& get_element_by_pos(size_t pos) const {
-        auto tmp = build_iterator(pos);
-        return (*tmp);   
+    const_vector_iterator<T> build_iterator(size_t index) const {
+        auto outer_it = _data.begin();
+        while ((*outer_it).size() < index && outer_it != _data.end()) {
+            index -= (*outer_it).size();
+            ++outer_it;
+        }
+        if (outer_it == _data.end()) {
+            throw std::out_of_range("Out of container's bounds");
+        }
+        auto inner_it = (*outer_it).begin();
+        while (index --> 0) {
+            ++inner_it;
+        }
+        return const_vector_iterator<T>((*this), inner_it, outer_it, (*outer_it));
     }
 
-    void erase_no_rebalance(const_vector_iterator<T> pos) {
+    std::pair<vector_iterator<T>, size_t> get_non_const(const_vector_iterator<T> cpos) {
+        size_t index = index_by_iterator(cpos);
+        vector_iterator<T> res = build_iterator(index);
+        return {res, index};
+    }
+
+    T& get_element_by_pos(size_t pos) {
+        return (*build_iterator(pos));
+    }
+
+    const T& get_element_by_pos(size_t pos) const {
+        return (*build_iterator(pos));
+    }
+
+    void erase_no_rebalance(const_vector_iterator<T> cpos) {
+        auto pos = get_non_const(cpos).first;
         (*pos.outer_iterator).erase(pos.inner_iterator);
     }
 
@@ -434,7 +580,7 @@ class my_vector {
         _size = 0;
     };
 
-    explicit my_vector(size_t count, const T& value = T()) {
+    my_vector(size_t count, const T& value = T()) {
         while (count --> 0) {
             add_back(value);
         }
@@ -459,10 +605,10 @@ class my_vector {
         : my_vector(other.begin(), other.end())
     {};
 
-    ~ my_vector(){};
+    ~my_vector(){};
 
     my_vector& operator=(const my_vector& other) {
-        my_vector<T> tmp(*this);
+        my_vector<T> tmp(other);
         tmp.swap(*this);
         return (*this);
     };
@@ -475,7 +621,7 @@ class my_vector {
 
     my_vector& operator=(my_vector&& other) {
         _data = std::move(other._data);
-        _size = std::move(other,_size);
+        _size = std::move(other._size);
         return (*this);
     };
 
@@ -550,22 +696,28 @@ class my_vector {
     // iterators
 
     iterator begin() noexcept {
-        return vector_iterator<T>((*this), (*_data.begin()).begin(), (_data.begin()), (*_data.begin()));
+        return build_iterator(0);
     };
 
     const_iterator begin() const noexcept {
-        return const_vector_iterator<T>((*this), (*_data.begin()).begin(), (_data.begin()), (*_data.begin()));
+        return build_iterator(0);
     };
 
-    const_iterator cbegin() const noexcept;
+    const_iterator cbegin() const noexcept {
+        return build_iterator(0);
+    };
 
     iterator end() noexcept {
-        return vector_iterator<T>((*this), (*_data.rbegin()).end(), _data.end());
+        return vector_iterator<T>((*this), (*_data.rbegin()).end(), _data.end(), *(--_data.end()));
     };
 
-    const_iterator end() const noexcept;
+    const_iterator end() const noexcept {
+        return const_vector_iterator<T>((*this), (*_data.rbegin()).end(), _data.end(), *(--_data.end()));
+    };
 
-    const_iterator cend() const noexcept;
+    const_iterator cend() const noexcept {
+        return const_vector_iterator<T>((*this), (*_data.rbegin()).end(), _data.end(), *(--_data.end()));
+    };
 
     iterator rbegin() noexcept;
 
@@ -595,8 +747,8 @@ class my_vector {
         while (!_data.empty()) {
             _data.back().clear();
             _data.pop_back();
-            _size = 0;
         }
+        _size = 0;
     };
 
     iterator insert(iterator pos, const T& value) {
@@ -607,17 +759,21 @@ class my_vector {
         return build_iterator(index);
     };
 
-    iterator insert(const_iterator pos, const T& value) {
-        size_t index = index_by_iterator(pos);
+    iterator insert(const_iterator cpos, const T& value) {
+        auto tmp = get_non_const(cpos);
+        vector_iterator<T>& pos = tmp.first;
+        size_t index = tmp.second;
         (*pos.outer_iterator).insert(pos.inner_iterator, value);
         rebalance();
         ++_size;
         return build_iterator(index);
     };
 
-    iterator insert(const_iterator pos, T&& value) {
-        size_t index = index_by_iterator(pos);
-        (*pos.outer_iterator).insert(pos.inner_iterator, value);
+    iterator insert(const_iterator cpos, T&& value) {
+        auto tmp = get_non_const(cpos);
+        vector_iterator<T>& pos = tmp.first;
+        size_t index = tmp.second;
+        (*pos.outer_iterator).insert(pos.inner_iterator, std::move(value));
         rebalance();
         ++_size;
         return build_iterator(index);
@@ -634,8 +790,10 @@ class my_vector {
     };
 
     template <class input_iterator>
-    iterator insert(const_iterator pos, input_iterator first, input_iterator last) {
-        size_t index = index_by_iterator(pos);
+    iterator insert(const_iterator cpos, input_iterator first, input_iterator last) {
+        auto tmp = get_non_const(cpos);
+        vector_iterator<T>& pos = tmp.first;
+        size_t index = tmp.second;
         while (first != last) {
             (*pos.outer_iterator).insert(pos.inner_iterator, (*first));
             ++first;
@@ -649,8 +807,10 @@ class my_vector {
         return insert(pos, ilist.begin(), ilist.end());
     };
 
-    iterator erase(const_iterator pos) {
-        size_t index = index_by_iterator(pos);
+    iterator erase(const_iterator cpos) {
+        auto tmp = get_non_const(cpos);
+        vector_iterator<T>& pos = tmp.first;
+        size_t index = tmp.second;
         (*pos.outer_iterator).erase(pos.inner_iterator);
         rebalance();
         --_size;
@@ -670,7 +830,7 @@ class my_vector {
 
     void push_back(const T& value) {
         if (_data.empty()) {
-            _data.push_back(std::list<T>());
+            _data.emplace_back(std::list<T>());
         }
         _data.back().push_back(value);
         ++_size;
@@ -678,7 +838,12 @@ class my_vector {
     };
 
     void push_back(T&& value) {
-        push_back(std::move(value));
+        if (_data.empty()) {
+            _data.emplace_back(std::list<T>());
+        }
+        _data.back().push_back(std::move(value));
+        ++_size;
+        rebalance();
     };
 
     void pop_back() {
