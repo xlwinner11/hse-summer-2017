@@ -845,6 +845,21 @@ class my_vector {
         return erase(pos, pos + 1);
     };
 
+    template <class... Args>
+    iterator emplace(const_iterator cpos, Args&&... args) {
+        auto pos = get_non_const(cpos);
+        (*pos.first.outer_iterator).emplace(pos.first.inner_iterator, args...);
+        ++_size;
+        rebalance();
+        return build_iterator(pos.second);  
+    }
+
+    template <class... Args>
+    void emplace_back(Args&&... args) {
+        _data.back().emplace_back(args...);
+        ++_size;
+        rebalance();
+    }
 
     void push_back(const T& value) {
         if (_data.empty()) {
@@ -879,7 +894,6 @@ class my_vector {
         std::swap(_data, other._data);
         std::swap(_size, other._size);
     };
-
 };
 
 template<class T>
@@ -944,3 +958,4 @@ template <class T>
 void swap(my_vector<T>& left, my_vector<T>& right) {
     left.swap(right);
 }
+
