@@ -938,10 +938,7 @@ bool operator<(my_vector<T>& first, my_vector<T>& second) {
 
 template<class T>
 bool operator<=(my_vector<T>& first, my_vector<T>& second) {
-    if (first == second) {
-        return true;
-    }
-    return first < second;
+    return !(second > first);
 };
 
 template<class T>
